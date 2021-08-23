@@ -18,6 +18,7 @@ class RegisteredUserController extends Controller
      *
      * @return \Illuminate\View\View
      */
+    // registration page
     public function create()
     {
         return view('auth.register');
@@ -31,6 +32,8 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
+    // calling validate with custom rules enures we have good data and enforces
+    // default password rules
     public function store(Request $request)
     {
         $request->validate([
@@ -39,6 +42,7 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        // hashing password!
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,

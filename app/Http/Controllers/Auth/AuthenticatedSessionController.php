@@ -15,6 +15,7 @@ class AuthenticatedSessionController extends Controller
      *
      * @return \Illuminate\View\View
      */
+    // login page
     public function create()
     {
         return view('auth.login');
@@ -26,6 +27,8 @@ class AuthenticatedSessionController extends Controller
      * @param  \App\Http\Requests\Auth\LoginRequest  $request
      * @return \Illuminate\Http\RedirectResponse
      */
+    // log the user in. the authenticate method automagically checks for email and password parameters
+    // and sanitized them
     public function store(LoginRequest $request)
     {
         $request->authenticate();
@@ -41,6 +44,7 @@ class AuthenticatedSessionController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
+    // logout request that restarts session essentially
     public function destroy(Request $request)
     {
         Auth::guard('web')->logout();

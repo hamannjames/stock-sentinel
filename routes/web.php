@@ -6,6 +6,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\TickerController;
 use App\Http\Controllers\SenatorController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AttributionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,5 +54,6 @@ Route::get('/senators/{senator:slug}', [SenatorController::class, 'show'])->name
 Route::get('/tickers', [TickerController::class, 'index'])->name('ticker.index');
 Route::get('/tickers/{ticker:slug}', [TickerController::class, 'show'])->name('ticker.show');
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth'])->name('dashboard');
+Route::get('/attributions', AttributionController::class)->name('attributions');
 
 require __DIR__.'/auth.php';
