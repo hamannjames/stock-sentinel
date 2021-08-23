@@ -1,22 +1,25 @@
 <?php
 
-namespace App\Http\Helpers;
+namespace App\Http\Helpers\Processors;
 
 use App\Models\Ptr;
 use ErrorException;
 use App\Models\Ticker;
 use App\Models\TransactionType;
-use App\Http\Helpers\EfdConnector;
 use Illuminate\Support\Collection;
+use App\Http\Helpers\Connectors\EfdConnector;
+use App\Http\Helpers\Processors\EfdTransactionProcessor;
 
-class PtrProcessor
+class PtrProcessor extends ApiDataProcessor
 {
     public $connector;
+    protected $etp;
     private $ptrLinkIndex = 3;
     private $ptrTransactorFirstNameIndex = 0;
     private $ptrTransactorLastNameIndex = 1;
     private $ptrIdStartIndex = 26;
     private $ptrIdLength = 36;
+    private $transactionRowIndex = 0;
     private $transactionDateIndex = 1;
     private $transactionOwnerIndex = 2;
     private $transactionTickerIndex = 3;
@@ -26,62 +29,104 @@ class PtrProcessor
     private $transactionAmountIndex = 7;
     private $transactionCommentIndex = 8;
 
-    public function __construct(EfdConnector $connector)
+    public function __construct(EfdConnector $connector, EfdTransactionProcessor $transactionProcessor)
     {
-        $this->connector = $connector;
-    }
-
-    public function processPtrIndex(\Generator $ptrIndex)
-    {
-        foreach($ptrIndex as $ptrPage) {
-            $this->processPtrPage(collect($ptrPage->data));
-        }
+        parent::__construct($connector);
+        $this->etp = $transactionProcessor;
     }
 
     /** @todo Implement amendment and paper ptr functionality */
-    private function processPtrPage(Collection $page)
+    public function processDataTable(Iterable $table)
     {
-        [$electronicPtrs, $paperPtrs] = $this->partitionElectronicPaperPtrs($page);
+        if (!is_a($table, Collection::class)) {
+            $table = collect($table);
+        }
+
+        [$electronicPtrs, $paperPtrs] = $this->partitionElectronicPaperPtrs($table);
         [$standardPtrs, $amendmentPtrs] = $this->partitionStandardAmendmentPtrs($electronicPtrs);
         
-        $amendmentPtrs->each([$this, 'processAmendmentPtr']);
-        $paperPtrs->each([$this, 'processPaperPtr']);
-
-        $processedStandardPtrs = $this->processStandardPtrs($standardPtrs);
-
-        $this->upsertPtrAttributes($processedStandardPtrs);
+        //$amendmentPtrs->each([$this, 'processAmendmentPtr']);
+        //$paperPtrs->each([$this, 'processPaperPtr']);
+        return $this->processStandardPtrs($standardPtrs);
     }
 
     public function processStandardPtrs(Collection $ptrs)
     {
-        return $ptrs->map([$this, 'processStandardPtr'])->filter([$this, 'filterOutPtrWithNoTransactions']);
-    }
-
-    public function processStandardPtr($ptr, $key)
-    {
-        $ptrLink = $ptr[$this->ptrLinkIndex];
-        $ptrTransactorFirstName = $ptr[$this->ptrTransactorFirstNameIndex];
-        $ptrTransactorLastName = $ptr[$this->ptrTransactorLastNameIndex];
-        $ptrId = $this->parsePtrId($ptrLink);
-
-        if (Ptr::find($ptrId)) {
-            return;
-        }
-
-        $ptrHtml = $this->fetchPtrPage($ptrId);
-        $ptrTransactions = collect($this->parsePtrHtml($ptrHtml));
-
-        $stockTransactions = $ptrTransactions->whereIn('assetType', ['stock', 'stock option']);
-        $blankTransactions = $ptrTransactions->where('assetType', '');
-
-        $filledTransactions = $blankTransactions->filter([$this, 'filterOutBlankTicker'])->map(function($transaction, $key){
-            $transaction['assetType'] = 'stock';
-            return $transaction;
+        $processedPtrs = $ptrs->map([$this, 'processDataRow'])->filter([$this, 'filterOutPtrWithNoTransactions']);
+        $tickers = $this->pluckAndDedupeTickers($processedPtrs)->filter(function($ticker){
+            return $ticker['symbol'] !== '--';
         });
 
-        $processedStockTransactions = $this->processStockTransactions($stockTransactions->concat($filledTransactions), $ptrTransactorFirstName, $ptrTransactorLastName);
+        return [
+            'tickers' => $tickers,
+            'ptrs' => $processedPtrs
+        ];
+    }
 
-        return $processedStockTransactions;
+    public function processDataRow(Iterable $row)
+    {
+        $ptrLink = $row[$this->ptrLinkIndex];
+        $ptrTransactorFirstName = trim($row[$this->ptrTransactorFirstNameIndex]);
+        $ptrTransactorLastName = trim($row[$this->ptrTransactorLastNameIndex]);
+        $ptrId = $this->parsePtrId($ptrLink);
+        $processedPtrTransactions = $this->processPtrReport($ptrId);
+
+        $blankSpacePos = strpos($ptrTransactorLastName, ' ');
+
+        if ($blankSpacePos) {
+            $ptrTransactorLastName = substr($ptrTransactorLastName, 0, $blankSpacePos);
+        }
+
+        $commaPos = strpos($ptrTransactorLastName, ',');
+
+        if ($commaPos) {
+            $ptrTransactorLastName = substr($ptrTransactorLastName, 0, $commaPos);
+        }
+
+        return [
+            'transactor' => [
+                'firstName' => $ptrTransactorFirstName,
+                'lastName' => $ptrTransactorLastName
+            ],
+            'id' => $ptrId,
+            'transactions' => $processedPtrTransactions
+        ];
+    }
+
+    public function processPtrReport($id)
+    {
+        $html = $this->fetchPtrPage($id);
+        $transactions = collect($this->parsePtrHtml($html));
+        
+        return $this->etp->processDataTable($transactions);
+    }
+
+    public function pluckAndDedupeTickers(Collection $ptrs)
+    {
+        $tickers = $ptrs->pluck('transactions')
+            ->map(function($transactions){
+                return $transactions->reduce(function ($carry, $transaction) {
+                    $carry[] = $transaction['ticker'];
+                    return $carry;
+                }, []);
+            })
+            ->flatten(1)
+            ->unique('symbol');
+        
+        $tickersReceived = $ptrs->pluck('transactions')
+            ->map(function($transactions){
+                return $transactions->reduce(function ($carry, $transaction) {
+                    if (isset($transaction['tickerReceived'])) {
+                        $carry[] = $transaction['tickerReceived'];
+                    }
+
+                    return $carry;
+                }, []);
+            })
+            ->flatten(1)
+            ->unique('symbol');
+
+        return $tickers->concat($tickersReceived);
     }
 
     public function processAmendmentPtr($ptr, $key) {}
@@ -100,24 +145,9 @@ class PtrProcessor
         return strpos($ptrLink, 'amendment') == false;
     }
 
-    public function filterOutExchangeTransaction($transaction)
+    public function filterOutPtrWithNoTransactions(Iterable $ptr)
     {
-        return $transaction['type'] !== 'exchange';
-    }
-
-    public function filterOutStockOptionTransaction($transaction)
-    {
-        return $transaction['assetType'] !== 'stock option';
-    }
-
-    public function filterOutPtrWithNoTransactions($ptr)
-    {
-        return $ptr->get('transactions')->count() > 0;
-    }
-
-    public function filterOutBlankTicker($transaction)
-    {
-        return $transaction['ticker'] !== '' && $transaction['ticker'] !== '--';
+        return count($ptr['transactions']) > 0;
     }
 
     public function partitionElectronicPaperPtrs(Collection $ptrs)
@@ -142,7 +172,7 @@ class PtrProcessor
 
     public function fetchPtrPage($id)
     {
-        return $this->connector->ptrShow($id);
+        return $this->connector->show($id);
     }
 
     public function parsePtrHtml($html)
@@ -170,10 +200,13 @@ class PtrProcessor
             }
 
             $transactions[] = [
+                'row' => $tdvals[$this->transactionRowIndex],
                 'date' => $tdvals[$this->transactionDateIndex],
                 'owner' => strtolower($tdvals[$this->transactionOwnerIndex]),
-                'ticker' => $tdvals[$this->transactionTickerIndex],
-                'assetName' => $tdvals[$this->transactionAssetNameIndex],
+                'ticker' => [
+                    'symbol' => $tdvals[$this->transactionTickerIndex],
+                    'name' => $tdvals[$this->transactionAssetNameIndex]
+                ],
                 'assetType' => strtolower($tdvals[$this->transactionAssetTypeIndex]),
                 'type' => strtolower($tdvals[$this->transactionTypeIndex]),
                 'amount' => $tdvals[$this->transactionAmountIndex],
@@ -231,54 +264,6 @@ class PtrProcessor
         ]);
     }
 
-    public function processExchangeTransactions(Collection $exchanges)
-    {
-        return $exchanges->map([$this, 'parseExchangeTickers']);
-    }
-
-    public function parseExchangeTickers($exchange, $key)
-    {
-        str_replace(' ', '', $exchange['ticker']);
-        $exchange['ticker'] = preg_replace('/\s+/', '/', $exchange['ticker']);
-
-        $explodedTicker = explode('/', $exchange['ticker']);
-        $exchangedTicker = $explodedTicker[0];
-        $receivedTicker = array_key_exists(1, $explodedTicker) ? $explodedTicker[1] : '--';
-
-        $exchange['ticker'] = $exchangedTicker;
-        $exchange['tickerReceived'] = $receivedTicker;
-
-        trim($exchange['assetName']);
-        $exchange['assetName'] = preg_replace('/\n+\s+/', '/', $exchange['assetName']);
-
-        $explodedAssetName = explode('/', $exchange['assetName']);
-        $exchangedAssetName = $explodedAssetName[0];
-        $receivedAssetName = array_key_exists(1, $explodedAssetName) ? $explodedAssetName[1] : '--';
-
-        $exchange['assetName'] = substr($exchangedAssetName, 0, strlen($exchangedAssetName) - 12);
-        $exchange['assetNameReceived'] = substr($receivedAssetName, 0, strlen($receivedAssetName) - 11);
-
-        return $exchange;
-    }
-
-    public function processStockOptionTransactions(Collection $transactions)
-    {
-        return $transactions->map([$this, 'parseStockOptionTicker']);
-    }
-
-    public function parseStockOptionTicker($transaction, $key)
-    {
-        $transaction['assetName'] = trim($transaction['assetName']);
-        $transaction['assetName'] = explode("\n", $transaction['assetName'])[0];
-
-        return $transaction;
-    }
-
-    public function parseProcessedPtrTickers()
-    {
-
-    }
-
     public function upsertPtrAttributes(Collection $processedPtrs)
     {
         $this->upsertPtrTickers($processedPtrs);
@@ -320,7 +305,7 @@ class PtrProcessor
         return Transactor::all();
     }
 
-    public function pluckAndFlattenPtrTransactors(Collection $ptrs)
+    public function pluckAndDedupeTransactors(Collection $ptrs)
     {
         return $ptrs->pluck('transactor')->unique(function($transactor){
             return $transactor['firstName'].$transactor['lastName'];
@@ -340,18 +325,8 @@ class PtrProcessor
         return $transaction;
     }
 
-    public function findOrCreateTickerFromName($name)
+    public function getEfdTransactionProcessor()
     {
-        $ticker = Ticker::where('name', $name)->first();
-
-        if (!$ticker) {
-            $ticker = new Ticker();
-            $blankCount = Ticker::where('symbol', 'LIKE', '--%')->count();
-            $ticker->symbol = '--' . ($blankCount + 1);
-            $ticker->name = $name;
-            $ticker->save();
-        }
-
-        return $ticker->symbol;
+        return $this->etp;
     }
 }

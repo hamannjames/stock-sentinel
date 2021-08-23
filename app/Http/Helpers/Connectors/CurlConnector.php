@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Helpers;
+namespace App\Http\Helpers\Connectors;
 
 use Generator;
 
@@ -16,15 +16,16 @@ abstract class CurlConnector implements ApiConnector
     protected $returnFormat;
 
     abstract public function startSession();
-    abstract public function validateIndexParams($start, $function);
-    abstract public function formatIndexStart();
-    abstract public function formatIndexEnd();
+    abstract public function validateIndexParams($params = []);
+    abstract public function formatIndexParams($params = []);
+    abstract public function formatCurlResponse($response);
+    abstract public function formatShowCurlResponse($response);
     abstract protected function setIndexRequestOptions();
     abstract protected function setShowRequestOptions();
-    abstract protected function setIndexRequestData($start, $end, $options = []);
+    abstract protected function setIndexRequestData($options = []);
     abstract protected function setShowRequestData($id, $options = []);
-    abstract protected function formatCurlResponse($response);
     abstract protected function handlePagination($response);
+    abstract protected function isPaginated($response);
 
     public function closeSession()
     {
@@ -34,12 +35,12 @@ abstract class CurlConnector implements ApiConnector
 
     public function resetSession() {
         $this->closeSession();
-        $this->startSession();
+        $this->session = curl_init();
     }
 
-    public function index($start, $end)
+    public function index($params)
     {
-        if (!$this->validateIndexParams($start, $end)) {
+        if (!$this->validateIndexParams($params)) {
             throw new Error('Invalid index parameters');
         }
 
@@ -47,31 +48,42 @@ abstract class CurlConnector implements ApiConnector
             $this->startSession();
         }
 
-        if (!$this->status === 'index') {
+        if (!($this->status === 'index')) {
             $this->setIndexRequestOptions();
+            $this->status = 'index';
         }
 
-        $this->setIndexRequestData($this->formatIndexStart($start), $this->formatIndexEnd($end));
+        $this->setIndexRequestData($this->formatIndexParams($params));
 
         $result = $this->formatCurlResponse(curl_exec($this->session));
 
         yield $result;
 
-        $this->handlePagination($result);
+        if ($this->isPaginated($result)) {
+            foreach($this->handlePagination($result) as $page) {
+                yield $page;
+            }
+        }
     }
 
     public function show($id)
     {
         if (!$this->connected) {
-            $this->connect();
+            $this->startSession();
         }
 
         if (!($this->status === 'show')) {
             $this->setShowRequestOptions();
+            $this->status = 'show';
         }
 
         $this->setShowRequestData($id);
 
-        return $this->formatCurlResonse(curl_exec($this->session));
+        return $this->formatShowCurlResponse(curl_exec($this->session));
+    }
+
+    public function getSession()
+    {
+        return $this->session;
     }
 }

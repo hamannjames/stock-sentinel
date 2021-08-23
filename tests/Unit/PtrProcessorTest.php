@@ -2,32 +2,38 @@
 
 namespace Tests\Unit;
 
+use DOMDocument;
 use Tests\TestCase;
 use App\Models\Ticker;
 use App\Models\Transactor;
 use App\Models\TransactionType;
-use App\Http\Helpers\EfdConnector;
-use App\Http\Helpers\PtrProcessor;
+use Illuminate\Support\Facades\App;
+use App\Http\Helpers\Processors\PtrProcessor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class PtrProcessorTest extends TestCase
 {
-    use RefreshDatabase;
+    public function setup(): void
+    {
+        parent::setup();
+        $this->ptrp = App::make(PtrProcessor::class);
+    }
     
     /** @test */
     public function ptr_processor_does_not_find_transactions_with_stock_option_and_exchange()
-    {
-        $ptrProcessor = new PtrProcessor(new EfdConnector());
-
+    {   
         // Guaranteed to return paginated collection
-        $data = $ptrProcessor->connector->ptrIndex('01/01/2020', '12/31/2020');
+        $data = $ptrProcessor->connector->index([
+            'startDate' => '01/01/2020', 
+            'endDate' => '12/31/2020']
+        );
 
         foreach($data as $ptrPage) {
             [$electronicPtrs, $paperPtrs] = $ptrProcessor->partitionElectronicPaperPtrs(collect($ptrPage->data));
             [$standardPtrs, $amendmentPtrs] = $ptrProcessor->partitionStandardAmendmentPtrs($electronicPtrs);
 
             foreach($standardPtrs as $key => $standardPtr) {
-                $processed = $ptrProcessor->processStandardPtr($standardPtr, $key);
+                $processed = $ptrProcessor->processDataRow($standardPtr);
                 
                 $this->assertTrue($processed->get('transactions')
                     ->where('assetType', 'stock option')
@@ -38,143 +44,162 @@ class PtrProcessorTest extends TestCase
     }
 
     /** @test */
-    public function ptr_processor_correctly_parses_stock_option_transactions()
-    {
-        $ptrProcessor = new PtrProcessor(new EfdConnector());
-
-        // Guaranteed to fetch ptrs with stock option transactions
-        $data = $ptrProcessor->connector->ptrIndex('05/01/2020', '05/01/2020');
-        $ptrWithStockOptions = $data->current()->data[1];
-
-        $ptrId = $ptrProcessor->parsePtrId($ptrWithStockOptions[$ptrProcessor->getPtrLinkIndex()]);
-        $ptrHtml = $ptrProcessor->fetchPtrPage($ptrId);
-        $ptrTransactions = collect($ptrProcessor->parsePtrHtml($ptrHtml));
-
-        $stockTransactions = $ptrTransactions->whereIn('assetType', ['stock', 'stock option']);
-        $processedStockTransactions = $ptrProcessor->processStockTransactions($stockTransactions, $ptrWithStockOptions[0], $ptrWithStockOptions[1]);
-
-        $this->assertTrue($processedStockTransactions->get('transactions')->last()['assetName'] === 'Aflac Incorporated');
-    }
-
-    /** @test */
     public function ptr_processor_correctly_partitions_ptr_data()
     {
-        $ptrProcessor = new PtrProcessor(new EfdConnector());
-
         // Guaranteed to return paginated collection
-        $data = $ptrProcessor->connector->ptrIndex('01/01/2020', '12/31/2020');
+        $data = $this->ptrp->connector->index([
+            'startDate' => '01/01/2020', 
+            'endDate' => '12/31/2020']
+        );
+
         $firstPage = collect($data->current()->data);
 
-        $this->assertTrue($firstPage->count() === $ptrProcessor->connector->getPtrRequestLength());
+        $this->assertTrue($firstPage->count() === $this->ptrp->connector->getPtrRequestLength());
 
-        [$electronicPtrs, $paperPtrs] = $ptrProcessor->partitionElectronicPaperPtrs($firstPage);
-        [$standardPtrs, $amendmentPtrs] = $ptrProcessor->partitionStandardAmendmentPtrs($electronicPtrs);
+        [$electronicPtrs, $paperPtrs] = $this->ptrp->partitionElectronicPaperPtrs($firstPage);
+        [$standardPtrs, $amendmentPtrs] = $this->ptrp->partitionStandardAmendmentPtrs($electronicPtrs);
 
-        $this->assertTrue($paperPtrs->count() + $standardPtrs->count() + $amendmentPtrs->count() === $ptrProcessor->connector->getPtrRequestLength());
+        $this->assertTrue($paperPtrs->count() + $standardPtrs->count() + $amendmentPtrs->count() === $this->ptrp->connector->getPtrRequestLength());
     }
 
     /** @test */
     public function ptr_processor_correctly_parses_ptr_id()
     {
-        $ptrProcessor = new PtrProcessor(new EfdConnector());
-
         // Guaranteed to return one PTR with exact PTR ID
-        $data = $ptrProcessor->connector->ptrIndex('02/02/2021', '02/02/2021');
+        $data = $this->ptrp->connector->index([
+            'startDate' => '02/02/2021', 
+            'endDate' => '02/02/2021'
+        ]);
+
         $ptrId = 'cf66f482-baa0-409c-abdd-b9cfcbb5fd4e';
         $ptr = $data->current()->data;
 
         $this->assertTrue(count($ptr) === 1);
-        $this->assertTrue(strpos($ptr[0][$ptrProcessor->getPtrLinkIndex()], $ptrId) > 0);
-        $this->assertTrue($ptrProcessor->parsePtrId($ptr[0][$ptrProcessor->getPtrLinkIndex()]) === $ptrId);
+        $this->assertTrue(strpos($ptr[0][$this->ptrp->getPtrLinkIndex()], $ptrId) > 0);
+        $this->assertTrue($this->ptrp->parsePtrId($ptr[0][$this->ptrp->getPtrLinkIndex()]) === $ptrId);
     }
 
     /** @test */
     public function ptr_processor_correctly_retrieves_ptr_page()
-    {   
-        $ptrProcessor = new PtrProcessor(new EfdConnector());
-
+    {
         // Guaranteed to return one PTR with exact PTR ID
-        $data = $ptrProcessor->connector->ptrIndex('02/02/2021', '02/02/2021');
+        $data = $this->ptrp->connector->index([
+            'startDate' => '02/02/2021', 
+            'endDate' => '02/02/2021'
+        ]);
+
         $ptr = $data->current()->data;
 
-        $ptrId = $ptrProcessor->parsePtrId($ptr[0][$ptrProcessor->getPtrLinkIndex()]);
-        $ptrHtml = $ptrProcessor->fetchPtrPage($ptrId);
+        $ptrId = $this->ptrp->parsePtrId($ptr[0][$this->ptrp->getPtrLinkIndex()]);
+        $ptrHtml = $this->ptrp->fetchPtrPage($ptrId);
 
-        $this->assertTrue(curl_getinfo($ptrProcessor->connector->session, \CURLINFO_RESPONSE_CODE) === 200);
+        $this->assertTrue(curl_getinfo($this->ptrp->connector->getSession(), \CURLINFO_RESPONSE_CODE) === 200);
+        
+        $doc = new DOMDocument;
+        $doc->preserveWhiteSpace = FALSE;
+        // must do this for html5 spec
+        libxml_use_internal_errors(true);
+        try {
+            $doc->loadHTML($ptrHtml);
+            $this->assertTrue(true);
+        }
+        catch(Exception $e) {
+            $this->assertTrue(false);
+        }
     }
 
     /** @test */
     public function ptr_processor_correctly_parses_ptr_html()
     {
-        $ptrProcessor = new PtrProcessor(new EfdConnector());
-
         // Guaranteed to return PTR with multiple types of transactions
-        $data = $ptrProcessor->connector->ptrIndex('07/28/2021', '07/28/2021');
+        $data = $this->ptrp->connector->index([
+            'startDate' => '07/28/2021', 
+            'endDate' => '07/28/2021'
+        ]);
+
         $ptr = $data->current()->data[0];
-        $ptrId = $ptrProcessor->parsePtrId($ptr[$ptrProcessor->getPtrLinkIndex()]);
+        $ptrId = $this->ptrp->parsePtrId($ptr[$this->ptrp->getPtrLinkIndex()]);
 
-        $ptrTransactions = collect($ptrProcessor->parsePtrHtml($ptrProcessor->fetchPtrPage($ptrId)));
+        $ptrTransactions = collect($this->ptrp->parsePtrHtml($this->ptrp->fetchPtrPage($ptrId)));
 
-        $this->assertTrue($ptrTransactions->where('ticker', 'TMO')->count() > 0);
-        $this->assertTrue($ptrTransactions->where('ticker', 'ADBE')->count() > 0);
+        $this->assertTrue($ptrTransactions->where('ticker.symbol', 'TMO')->count() > 0);
+        $this->assertTrue($ptrTransactions->where('ticker.symbol', 'ADBE')->count() > 0);
         $this->assertTrue($ptrTransactions->where('assetType', 'stock')->count() === 2);
         $this->assertTrue($ptrTransactions->where('assetType', 'municipal security')->count() === 1);
     }
 
     /** @test */
+    public function processor_correctly_formats_last_name()
+    {
+        // Guaranteed ptr with name with comma
+        $data = $this->ptrp->connector->index([
+            'startDate' => '03/11/2020', 
+            'endDate' => '03/11/2020'
+        ]);
+        $firstPage = collect($data->current()->data);
+        $transactor = $this->ptrp->processDataRow($firstPage->first())['transactor'];
+
+        $this->assertTrue($transactor['lastName'] === 'McConnell');
+
+        // Guaranteed ptr with name with space and comma
+        $data = $this->ptrp->connector->index([
+            'startDate' => '11/04/2020', 
+            'endDate' => '11/04/2020'
+        ]);
+        $firstPage = collect($data->current()->data);
+        $transactor = $this->ptrp->processDataRow($firstPage->first())['transactor'];
+
+        $this->assertTrue($transactor['lastName'] === 'Perdue');
+    }
+
+    /** @test */
     public function process_standard_ptr_correctly_returns_single_ptr_data()
     {
-        $ptrProcessor = new PtrProcessor(new EfdConnector());
-
         // Guaranteed to return paginated collection
-        $data = $ptrProcessor->connector->ptrIndex('01/01/2020', '12/31/2020');
+        $data = $this->ptrp->connector->index([
+            'startDate' => '01/01/2020', 
+            'endDate' => '12/31/2020'
+        ]);
         $firstPage = collect($data->current()->data);
 
-        [$electronicPtrs, $paperPtrs] = $ptrProcessor->partitionElectronicPaperPtrs($firstPage);
-        [$standardPtrs, $amendmentPtrs] = $ptrProcessor->partitionStandardAmendmentPtrs($electronicPtrs);
+        [$electronicPtrs, $paperPtrs] = $this->ptrp->partitionElectronicPaperPtrs($firstPage);
+        [$standardPtrs, $amendmentPtrs] = $this->ptrp->partitionStandardAmendmentPtrs($electronicPtrs);
 
         // Guaranteed to be ptr with multiple stock transactions including exchanges
         $singlePtr = $standardPtrs->first();
-        $processedPtr = $ptrProcessor->processStandardPtr($singlePtr, 1)->all();
+        $processedPtr = $this->ptrp->processDataRow($singlePtr, 1);
 
-        $this->assertTrue($processedPtr['tickers']->count() === 5);
-        $this->assertTrue($processedPtr['types']->count() === 2);
         $this->assertTrue($processedPtr['transactor']['firstName'] === 'Patrick J');
         $this->assertTrue($processedPtr['transactor']['lastName'] === 'Toomey');
         $this->assertTrue($processedPtr['transactions']->count() === 4);
     }
 
     /** @test */
-    public function ptr_processor_correctly_parses_and_processes_stock_exchanges()
+    public function ptr_processor_proccess_standard_ptrs_returns_correct_data()
     {
-        $ptrProcessor = new PtrProcessor(new EfdConnector());
-        $ptrProcessor->connector->connect();
-
-        // Guaranteed ptr with exchange transaction
-        $ptrHtml = $ptrProcessor->fetchPtrPage('d95fd568-e9c2-4715-b405-88c2758b44cc');
-        $ptrTransactions = collect($ptrProcessor->parsePtrHtml($ptrHtml));
-        $stockTransactions = $ptrTransactions->whereIn('assetType', ['stock', 'stock option']);
-        $processedTransaction = $ptrProcessor->processExchangeTransactions($stockTransactions)->all()[1];
-
-        $this->assertTrue($processedTransaction['ticker'] === 'FTV');
-        $this->assertTrue($processedTransaction['tickerReceived'] === 'VNT');
-        $this->assertTrue($processedTransaction['assetName'] === 'Fortive Corporation');
-        $this->assertTrue($processedTransaction['assetNameReceived'] === 'Vontier Corporation');
-    }
-
-    /** @test */
-    public function ptr_processor_proccess_standard_ptrs_returns_correct_account()
-    {
-        $ptrProcessor = new PtrProcessor(new EfdConnector());
+        $this->ptrp->connector->setPtrRequestLength(25);
 
         // Guaranteed to return paper, standard, stock, and non stock ptrs, sometimes mixed
-        $data = $ptrProcessor->connector->ptrIndex('01/01/2020', '01/31/2020');
+        $data = $this->ptrp->connector->index([
+            'startDate' => '01/01/2020', 
+            'endDate' => '12/31/2020'
+        ]);
         $firstPage = collect($data->current()->data);
 
-        [$electronicPtrs, $paperPtrs] = $ptrProcessor->partitionElectronicPaperPtrs($firstPage);
-        [$standardPtrs, $amendmentPtrs] = $ptrProcessor->partitionStandardAmendmentPtrs($electronicPtrs);
+        [$electronicPtrs, $paperPtrs] = $this->ptrp->partitionElectronicPaperPtrs($firstPage);
+        [$standardPtrs, $amendmentPtrs] = $this->ptrp->partitionStandardAmendmentPtrs($electronicPtrs);
 
-        $this->assertTrue($ptrProcessor->processStandardPtrs($standardPtrs)->count() === 9);
+        $processedPtrs = $this->ptrp->processStandardPtrs($standardPtrs);
+        $transactionCount = $processedPtrs->pluck('transactions')->reduce(function($carry, $transactions){
+            return $carry + $transactions->count();
+        }, 0);
+
+        $this->assertTrue($processedPtrs->count() === 12);
+        $this->assertTrue($processedPtrs->transactors->count() === 9);
+        $this->assertTrue($transactionCount === 85);
+        $this->assertTrue($processedPtrs->tickers->count() === 78);
+        $this->assertTrue($processedPtrs->transactors->duplicates('lastName')->isEmpty());
+        $this->assertTrue($processedPtrs->tickers->duplicates('symbol')->isEmpty());
     }
 
     /** @test */

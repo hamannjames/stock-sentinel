@@ -15,14 +15,16 @@ class CreateTransactorsTable extends Migration
     {
         Schema::create('transactors', function (Blueprint $table) {
             $table->id();
+            $table->string('pro_publica_id', 30)->unique();
             $table->string('first_name');
-            $table->string('middle_name');
+            $table->string('middle_name')->nullable();
             $table->string('last_name');
             $table->foreignId('transactor_type_id')->constrained()->onUpdate('cascade');
             $table->boolean('in_office');
             $table->string('party', 5);
+            $table->string('gender', 5)->nullable();
             $table->char('state', 2);
-            $table->string('api_uri');
+            $table->integer('congress');
             $table->timestamps();
         });
     }

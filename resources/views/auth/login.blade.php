@@ -2,7 +2,7 @@
     <x-auth-card>
         <x-slot name="logo">
             <a href="/">
-                <x-application-logo class="w-20 h-20 fill-current text-gray-500" />
+                <img class="max-w-full w-48" src="{{ url('/static/images/logo/stocksentinellogo.png') }}" alt="Stock Sentinel Logo" />
             </a>
         </x-slot>
 
@@ -52,5 +52,6 @@
                 </x-button>
             </div>
         </form>
+        <p class="text-center text-xs mt-4">Don't have an account? <a class="underline" href="{{ route('register') }}">Register here</a>.</p>
     </x-auth-card>
 </x-guest-layout>

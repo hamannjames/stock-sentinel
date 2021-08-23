@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use App\Models\TransactionAssetType;
 
 class TransactionAssetTypeSeeder extends Seeder
 {
@@ -13,6 +14,7 @@ class TransactionAssetTypeSeeder extends Seeder
      */
     public function run()
     {
-        //
+        TransactionAssetType::factory()->create(['name' => 'stock']);
+        TransactionAssetType::factory()->create(['name' => 'stock option']);
     }
 }

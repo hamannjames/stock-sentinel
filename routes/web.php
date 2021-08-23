@@ -2,6 +2,10 @@
 
 use App\Http\Helpers\EfdConnector;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\TickerController;
+use App\Http\Controllers\SenatorController;
+use App\Http\Controllers\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,18 +18,11 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
-
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth'])->name('dashboard');
+Route::get('/', HomeController::class)->name('home');
+Route::get('/senators', [SenatorController::class, 'index'])->name('senator.index');
+Route::get('/senators/{senator:slug}', [SenatorController::class, 'show'])->name('senator.show');
+Route::get('/tickers', [TickerController::class, 'index'])->name('ticker.index');
+Route::get('/tickers/{ticker:slug}', [TickerController::class, 'show'])->name('ticker.show');
+Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth'])->name('dashboard');
 
 require __DIR__.'/auth.php';
-
-// Route to test my api while debuggin. Not used by user.
-Route::get('/testapi', function(){
-    $efd = new EfdConnector();
-    dd($efd->ptrIndex('01/01/2020', '12/31/2020')->current());
-});

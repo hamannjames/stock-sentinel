@@ -3,6 +3,10 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Http\Helpers\Connectors\EfdConnector;
+use App\Http\Helpers\Processors\PtrProcessor;
+use App\Http\Helpers\Connectors\ProPublicaConnector;
+use App\Http\Helpers\Processors\EfdTransactionProcessor;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -13,7 +17,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        $this->app->bind(PtrProcessor::class, function ($app) {
+            return new PtrProcessor(new EfdConnector(), new EfdTransactionProcessor());
+        });
+
+        $this->app->bind(ProPublicaConnector::class, function ($app) {
+            return new ProPublicaConnector();
+        });
     }
 
     /**

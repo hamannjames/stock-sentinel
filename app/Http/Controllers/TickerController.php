@@ -14,7 +14,7 @@ class TickerController extends Controller
      */
     public function index()
     {
-        //
+        return view('ticker.ticker-index');
     }
 
     /**
@@ -46,7 +46,23 @@ class TickerController extends Controller
      */
     public function show(Ticker $ticker)
     {
-        //
+        $connected = auth()->user() && auth()->user()
+            ->connections()
+            ->whereHasMorph('connectable', Ticker::class)
+            ->where('connectable_id', $ticker->id)
+            ->exists();
+
+        $transactions = $ticker->transactions()
+            ->with('transactor')
+            ->with('transactionType')
+            ->orderByDesc('transaction_date')
+            ->get();
+
+        return view('ticker.ticker-show', [
+            'ticker' => $ticker,
+            'transactions' => $transactions,
+            'connected' => $connected
+        ]);
     }
 
     /**

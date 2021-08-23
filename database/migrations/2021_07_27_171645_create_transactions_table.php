@@ -18,14 +18,17 @@ class CreateTransactionsTable extends Migration
             $table->date('transaction_date');
             $table->foreignId('transactor_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
             $table->foreignId('ticker_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
+            $table->mediumInteger('ticker_received_id')->nullable();
             $table->foreignId('transactor_type_id')->constrained()->onUpdate('cascade');
             $table->string('transaction_owner', 30);
             $table->foreignId('transaction_type_id')->constrained()->onUpdate('cascade');
             $table->foreignId('transaction_asset_type_id')->constrained()->onUpdate('cascade');;
-            $table->mediumInteger('transaction_amount_min')->unsigned()->nullable();
-            $table->mediumInteger('transaction_amount_max')->unsigned()->nullable();
-            $table->mediumInteger('transaction_amount_exact')->unsigned()->nullable();
-            $table->foreignId('ptr_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
+            $table->unsignedInteger('transaction_amount_min')->unsigned()->nullable();
+            $table->unsignedInteger('transaction_amount_max')->unsigned()->nullable();
+            $table->unsignedInteger('transaction_amount_exact')->unsigned()->nullable();
+            $table->unique(['ptr_id', 'ptr_row']);
+            $table->string('ptr_id', 100);
+            $table->smallInteger('ptr_row');
             $table->timestamps();
         });
     }

@@ -10,6 +10,8 @@ class Connection extends Model
 {
     use HasFactory;
 
+    protected $guarded = [];
+
     public function connectable()
     {
         return $this->morphTo();

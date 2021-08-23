@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Ptr;
 use App\Models\Ticker;
+use App\Models\Connection;
 use App\Models\Transactor;
 use App\Models\TransactorType;
 use App\Models\TransactionType;

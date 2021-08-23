@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <x-includes.html-head />
+    <x-includes.dashboard.html-head />
     
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100">
-            @include('layouts.navigation')
+            <x-includes.frontend.navigation />
 
             <!-- Page Heading -->
             <header class="bg-white shadow">
@@ -19,6 +19,6 @@
             </main>
         </div>
 
-        <x-includes.footer />
+        <x-includes.dashboard.footer />
     </body>
 </html>

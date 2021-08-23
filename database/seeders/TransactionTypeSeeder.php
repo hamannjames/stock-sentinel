@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\TransactionType;
 use Illuminate\Database\Seeder;
 
 class TransactionTypeSeeder extends Seeder
@@ -13,6 +14,9 @@ class TransactionTypeSeeder extends Seeder
      */
     public function run()
     {
-        //
+        TransactionType::factory()->create(['name' => 'purchase']);
+        TransactionType::factory()->create(['name' => 'exchange']);
+        TransactionType::factory()->create(['name' => 'sale (partial)']);
+        TransactionType::factory()->create(['name' => 'sale (full)']);
     }
 }

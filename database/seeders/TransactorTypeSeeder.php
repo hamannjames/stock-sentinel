@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\TransactorType;
 use Illuminate\Database\Seeder;
 
 class TransactorTypeSeeder extends Seeder
@@ -13,6 +14,6 @@ class TransactorTypeSeeder extends Seeder
      */
     public function run()
     {
-        //
+        TransactorType::factory()->create(['name' => 'senator']);
     }
 }
