@@ -1,4 +1,13 @@
-# How to install
+# Installation
+
+## Requirements
+
+-   Composer CLI (I am using version 2.0.8)
+-   NPM CLI (I am using 7.5.2)
+-   PHP version 8
+-   MySQL
+
+## How to Install
 
 1. Clone repo
 2. In command line, run “composer install”
