@@ -3,14 +3,14 @@
         Stock Sentinel currently hold data on {{ $senators->total() }} senators. Some senators may not be in office, but we hold on to transaction records reported by senators since 2012. The public record maintains transaction data for elected representatives up to 6 years after they leave office, but we aim to maintain a longer store of that data.
     </p>
 
-    <div class="flex mx-8 mb-4 space-x-4">
-        <label>
+    <div class="flex mx-4 mb-4 flex-wrap">
+        <label class="px-4">
             Search Name
             <div>
                 <input class="rounded-md border-2 border-accent text-black" type="text" wire:model.debounce.500ms="search" />
             </div>
         </label>
-        <label>
+        <label class="px-4">
             In Office
             <div>
                 <input class="rounded-md border-2 border-accent" type="checkbox" wire:model="inOffice" />

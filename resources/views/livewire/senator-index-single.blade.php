@@ -1,4 +1,4 @@
-<div class="w-1/4 px-8">
+<div class="w-full sm:1-1/2 md:w-1/4 px-8">
     <a href="{{ route('senator.show', $senator->slug) }}">
         <div class="border-2 border-gray-500 p-4 mb-12 rounded-xl bg-gray-200 text-gray-900 w-full max-w-xl transform transition-transform hover:-translate-y-1 text-center">
             <figure

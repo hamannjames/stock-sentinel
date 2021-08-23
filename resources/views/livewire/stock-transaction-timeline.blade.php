@@ -13,8 +13,8 @@
     </script>
 
     <section>
-        <div class="flex text-sm">
-            <label class="mr-4">
+        <div class="flex text-sm flex-wrap -mx-2">
+            <label class="px-2 mt-2">
                 View
                 <div>
                     <select class="text-sm rounded-md border-green-400 border-2 text-black w-44" wire:model="view">
@@ -23,26 +23,26 @@
                     </select>
                 </div>
             </label>
-            <form wire:submit.prevent="newDates" class="flex space-x-4">
-                <label>
+            <form wire:submit.prevent="newDates" class="flex flex-wrap">
+                <label class="mt-2 px-2">
                     Date Start
                     <div>
                         <input class="text-sm rounded-md border-2 border-green-400 text-black w-44" type="date" wire:model.defer="startDate">
                     </div>
                     @error('startDate') <div class="error text-red-400">{{ $message }}</div> @enderror
                 </label>
-                <label>
+                <label class="mt-2 px-2">
                     Date End
                     <div>
                         <input class="text-sm rounded-md border-2 border-green-400 text-black w-44" type="date" wire:model.defer="endDate">
                     </div>
                 </label>
-                <div class="self-end">
-                    <input class="p-2 border-2 border-secondary bg-secondary hover:bg-action-light cursor-pointer transition-colors rounded-md leading-5" type="submit" value="Apply Dates">
+                <div class="self-end px-2">
+                    <input class="p-2 border-2 border-secondary bg-secondary hover:bg-action-light cursor-pointer transition-colors rounded-md leading-5 mt-2" type="submit" value="Apply Dates">
                 </div>
             </form>
         </div>
-        <div class="flex mt-6 space-x-4">
+        <div class="flex mt-6 -mx-2 flex-wrap">
             @foreach ($filterSettings as $filter => $settings)
                 @php
                     $componentName = 'timeline.filters.' . Str::kebab(Str::camel($filter));    

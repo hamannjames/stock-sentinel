@@ -82,6 +82,14 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('senator.index')" :active="request()->routeIs('senator.index')">
+                {{ __('Senators') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('ticker.index')" :active="request()->routeIs('ticker.index')">
+                {{ __('Tickers') }}
+            </x-responsive-nav-link>
         </div>
 
         <!-- Responsive Settings Options -->

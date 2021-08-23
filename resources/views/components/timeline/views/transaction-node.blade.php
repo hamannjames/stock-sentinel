@@ -1,4 +1,4 @@
-<div x-data="{ show: false }" class="mb-2 relative z-0 w-4 h-4">
+<div x-data="{ show: false }" class="mb-2 relative z-0 w-4 h-4 order-2 lg:order-1">
     <div
         @click="show = true"
         class="absolute z-0 rounded-full w-4 h-4 cursor-pointer transition-transform transform hover:-translate-y-1" 

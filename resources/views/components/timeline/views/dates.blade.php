@@ -1,3 +1,3 @@
-<div class="flex flex-col md:flex-row justify-between">
+<div class="flex flex-col lg:flex-row justify-between">
     {{ $slot }}
 </div>

@@ -5,7 +5,7 @@
     @endphp
     
     @foreach($transactionRange as $index)
-        <div class="relative flex flex-grow flex-row md:flex-col justify-start md:justify-end items-center mx-2" style="z-index:{{ count($transactionRange) - $index }}">
+        <div class="relative flex flex-grow flex-row lg:flex-col justify-start lg:justify-end items-center mx-2 lg:my-2" style="z-index:{{ count($transactionRange) - $index }}">
             @php
                 $theDate = $startDate->toDateString();
             @endphp
@@ -16,7 +16,7 @@
                 @endforeach
             @endif
 
-            <div class="order-1 md:order-2 text-center border-r-2 md:border-r-0 md:border-t-2 pr-2 md:pt-2 md:pr-0 mr-2 md:mt-2 md:mr-0">
+            <div class="order-1 lg:order-2 text-center border-r-2 lg:border-r-0 lg:border-t-2 pr-2 lg:pt-2 lg:pr-0 mr-2 lg:mt-2 lg:mr-0">
                 {{ \Carbon\Carbon::createFromFormat('Y-m-d', $theDate)->format('n/j') }}
             </div>
 
