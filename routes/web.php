@@ -46,6 +46,12 @@ use App\Http\Controllers\AttributionController;
     You can run all of them with "php artisan test" but it will kill your computer. I ran them one at a
     time with a VSCode PHPUnit extension. They might not all pass now since the connector and processor
     classes changed a lot up until a few weeks before the due date.
+
+    You can go to database folder to see the factoried, seeders, and migrations I created to put data in the
+    database and mock up data. I ended up not using the factories that much, but I did seed users and some other
+    transactions stuff using them. The migrations are like a version history of the database
+
+    go to public/static folder for static image assets
 */
 
 Route::get('/', HomeController::class)->name('home');
