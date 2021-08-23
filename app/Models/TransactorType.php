@@ -7,6 +7,7 @@ use App\Models\Transaction;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+// model for transactor types (currently only senator exists)
 class TransactorType extends Model
 {
     use HasFactory;

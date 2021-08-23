@@ -1,5 +1,5 @@
 <?php
-
+// some simple config for the efd connector
 return [
   'base_url' => 'https://efdsearch.senate.gov',
   'login_path' => '/search/home',

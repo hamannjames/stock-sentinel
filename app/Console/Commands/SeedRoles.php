@@ -39,6 +39,7 @@ class SeedRoles extends Command
      */
     public function handle()
     {
+        // seed admin role and permissions to create user
         $admin = Role::firstOrCreate([
             'name' => 'admin',
             'display_name' => 'Administrator',

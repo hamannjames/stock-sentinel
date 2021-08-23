@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 
+// need to delete this since I do not use it to create transactions. they are handled behind the scenes
 class TransactionController extends Controller
 {
     /**

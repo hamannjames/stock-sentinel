@@ -51,6 +51,8 @@ class User extends Authenticatable
         return $this->hasMany(Connection::class);
     }
 
+    // add a connection with to a certain  in connections table
+    // the model class handles data sanitization
     public function addConnection(Model $model)
     {
         Connection::firstOrCreate([
@@ -60,6 +62,7 @@ class User extends Authenticatable
         ]);
     }
 
+    // delete a connection if it exists
     public function removeConnection(Model $model)
     {
         $this->connections()

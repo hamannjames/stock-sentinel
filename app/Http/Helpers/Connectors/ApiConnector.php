@@ -2,6 +2,7 @@
 
 namespace App\Http\Helpers\Connectors;
 
+// This interface is a contract for all api connectors
 interface ApiConnector
 {
     public function startSession();

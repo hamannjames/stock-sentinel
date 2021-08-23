@@ -1,10 +1,11 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Connection;
 use Illuminate\Http\Request;
 
+// I am not sure what this does. It might need to be deleted. I created it, but I don't think I actually
+// use it
 class ConnectionController extends Controller
 {
     /**

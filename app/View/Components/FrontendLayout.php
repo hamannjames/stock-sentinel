@@ -4,6 +4,8 @@ namespace App\View\Components;
 
 use Illuminate\View\Component;
 
+// this is a layout component for the front end of the app. Data can be shared here with any view
+// that is used on the front end
 class FrontendLayout extends Component
 {
     /**

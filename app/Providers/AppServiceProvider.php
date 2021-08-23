@@ -17,6 +17,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
+        // I use the service provider to make sure I create connectors and processors the same way
+        // across the app
         $this->app->bind(PtrProcessor::class, function ($app) {
             return new PtrProcessor(new EfdConnector(), new EfdTransactionProcessor());
         });

@@ -4,6 +4,8 @@ namespace App\Http\Helpers\Connectors;
 
 use Error;
 
+// this class is a specific extension of a curl connector which knows how to connect to the efd
+// database
 class EfdConnector extends CurlConnector
 {
     protected $loginUrl;
@@ -16,6 +18,7 @@ class EfdConnector extends CurlConnector
 
     public function __construct()
     {
+        // get most of our needs from a config file
         $this->baseUrl = config('efd.base_url');
         $this->loginUrl = $this->baseUrl . config('efd.login_path') . '/';
         $this->searchUrl = $this->baseUrl . config('efd.search_path') . '/';
@@ -25,7 +28,9 @@ class EfdConnector extends CurlConnector
         $this->session = curl_init();
         $this->connected = false;
         $this->status = '';
+        // arbitrary date format efd uses
         $this->dateFormat = 'm/d/Y';
+        // arbitary request length of 100 ptrs
         $this->ptrRequestLength = 100;
     }
 
@@ -35,10 +40,12 @@ class EfdConnector extends CurlConnector
             return;
         }
 
+        // for efd, to start we need to establish cookies
         $result = $this->makeCookieRequest();
         $this->resetSession();
         $this->setSessionCookies($result);
 
+        // then we need to agree to terms
         $result2 = $this->makeAgreementRequest();
         $this->setConnectedRequestOptions();
 
@@ -53,6 +60,7 @@ class EfdConnector extends CurlConnector
 
     protected function setCookieRequestOptions()
     {
+        // this request is mostly just an initial handshake to get some cookies
         curl_setopt_array($this->session, [
             CURLOPT_URL => $this->loginUrl,
             CURLOPT_RETURNTRANSFER => true,
@@ -63,6 +71,7 @@ class EfdConnector extends CurlConnector
 
     protected function setSessionCookies($cookieRequestResult)
     {
+        // we need to pull the csrf token and set from the handshake
         preg_match_all('/^Set-Cookie:\s*([^;]*)/mi', $cookieRequestResult,  $match_found);
 
         $cookies = [];
@@ -83,6 +92,8 @@ class EfdConnector extends CurlConnector
 
     protected function setAgreementRequestOptions()
     {
+        // this is a post request to agree to the terms. we need the middleware token from the
+        // handhsake
         curl_setopt_array($this->session, [
             CURLOPT_URL => $this->loginUrl,
             CURLOPT_RETURNTRANSFER => true,
@@ -100,6 +111,7 @@ class EfdConnector extends CurlConnector
 
     protected function setConnectedRequestOptions()
     {
+        // after the handhsake and agreement we do not need header info
         curl_setopt_array($this->session, [
             CURLOPT_HEADER => false
         ]);
@@ -107,6 +119,7 @@ class EfdConnector extends CurlConnector
 
     protected function setIndexRequestOptions()
     {
+        // index requests require a middleware token and are post requests
         curl_setopt_array($this->session, [
             CURLOPT_URL => $this->indexUrl,
             CURLOPT_POST => true,
@@ -121,10 +134,12 @@ class EfdConnector extends CurlConnector
 
     protected function setIndexRequestData($params = [])
     {
+        // the offset determines which records we get. We start at 0
         $offset = !empty($params) && isset($params['offset']) ? $params['offset'] : 0;
         $start = $params['startDate'];
         $end = $params['endDate'];
 
+        // some arbitrary data to get only ptr reports for senators
         $postData = [
             'start' => $offset,
             'length' => $this->ptrRequestLength,
@@ -141,6 +156,7 @@ class EfdConnector extends CurlConnector
 
     protected function setShowRequestOptions()
     {
+        // show requests are get requests and we do not need the token anymore
         curl_setopt_array($this->session, [
             CURLOPT_HTTPGET => true,
             CURLOPT_HTTPHEADER => [
@@ -154,11 +170,13 @@ class EfdConnector extends CurlConnector
 
     protected function setShowRequestData($id, $options = [])
     {
+        // we need to set up the id in the url
         curl_setopt($this->session, CURLOPT_URL, $this->showUrl . $id . '/');
     }
 
     protected function isPaginated($result)
     {
+        // we know the data is paginated if the records total are greater than the result
         return $result->recordsTotal > count($result->data);
     }
 
@@ -167,11 +185,13 @@ class EfdConnector extends CurlConnector
         $offset = count($result->data);
         $offsetIncrease = $offset;
 
+        // while the total records are greater than our offset, pull more data
         while($result->recordsTotal > $offset) {
             if (!($this->status === 'index')) {
                 $this->setIndexRequestOptions();
             }
 
+            // pass in an offset so we keep pulling new data
             $this->setIndexRequestData([
                 'startDate' => $this->currentIndexStart, 
                 'endDate' => $this->currentIndexEnd, 
@@ -182,12 +202,14 @@ class EfdConnector extends CurlConnector
 
             $offset += $offsetIncrease;
 
+            // yield the result to the caller so we can keep going after it is processed
             yield $result;
         }
     }
 
     public function formatCurlResponse($result)
     {
+        // we expect index results to be in json
         if ($this->status === 'index') {
             $result = json_decode($result);
         }
@@ -195,8 +217,15 @@ class EfdConnector extends CurlConnector
         return $result;
     }
 
+    public function formatShowCurlResponse($result)
+    {
+        // show results are plain html
+        return $result;
+    }
+
     public function validateIndexParams($params = [])
     {
+        // we need a start date and end date
         if (!isset($params['startDate']) || !isset($params['endDate'])) {
             throw new Error("Missing start or end date parameters");
         }
@@ -204,6 +233,7 @@ class EfdConnector extends CurlConnector
         $start = $params['startDate'];
         $end = $params['endDate'];
 
+        // ensure dates are in right format
         $s = \DateTime::createFromFormat($this->dateFormat, $start);
         $e = \DateTime::createFromFormat($this->dateFormat, $end);
 
@@ -215,6 +245,7 @@ class EfdConnector extends CurlConnector
             throw new Error("Index end does not adhere to date format {$this->dateFormat}");
         }
 
+        // ensure start date is less than end date
         if ($e < $s) {
             throw new Error("Index end cannot come before index start");
         }

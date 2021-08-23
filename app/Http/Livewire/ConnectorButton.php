@@ -4,6 +4,7 @@ namespace App\Http\Livewire;
 
 use Livewire\Component;
 
+// this simple class handles creating connections between the current user and the model passed into it
 class ConnectorButton extends Component
 {
     public $model;
@@ -11,10 +12,12 @@ class ConnectorButton extends Component
     
     public function connect()
     {
+        // redirect if not logged in
         if (auth()->guest()) {
             return redirect('login');
         }
 
+        // call add connection on the user model and dispatch a browser event if successfull
         auth()->user()->addConnection($this->model);
         $this->connected = true;
         $this->dispatchBrowserEvent('user-connected');
@@ -26,6 +29,7 @@ class ConnectorButton extends Component
             return redirect('login');
         }
 
+        // call remove connection on the user model and dispatch a browser event if successfull
         auth()->user()->removeConnection($this->model);
         $this->connected = false;
         $this->dispatchBrowserEvent('user-disconnected');

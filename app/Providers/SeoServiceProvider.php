@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 
+// I use this class to easily pass seo meta tags to views automatically and handle defaults
 class SeoServiceProvider extends ServiceProvider
 {
     /**

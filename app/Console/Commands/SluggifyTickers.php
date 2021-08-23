@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Ticker;
 use Illuminate\Console\Command;
 
+// this simple command serves one purpose. re-save all the current tickers to give them a slug
 class SluggifyTickers extends Command
 {
     /**

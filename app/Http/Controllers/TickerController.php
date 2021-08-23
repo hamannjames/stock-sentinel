@@ -12,6 +12,7 @@ class TickerController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+    // simply return view for index page
     public function index()
     {
         return view('ticker.ticker-index');
@@ -46,12 +47,14 @@ class TickerController extends Controller
      */
     public function show(Ticker $ticker)
     {
+        // determine if user is connected to this ticker
         $connected = auth()->user() && auth()->user()
             ->connections()
             ->whereHasMorph('connectable', Ticker::class)
             ->where('connectable_id', $ticker->id)
             ->exists();
 
+        // get all transactions associated with this ticker
         $transactions = $ticker->transactions()
             ->with('transactor')
             ->with('transactionType')

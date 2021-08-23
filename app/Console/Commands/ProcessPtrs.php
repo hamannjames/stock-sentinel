@@ -1,5 +1,8 @@
 <?php
 
+/*
+    This is command I wrote initially to massage data from the efD database. I no longer use it, it should be deleted
+*/
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;

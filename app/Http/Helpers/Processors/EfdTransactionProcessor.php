@@ -5,10 +5,14 @@ namespace App\Http\Helpers\Processors;
 use Illuminate\Support\Collection;
 use App\Http\Helpers\Processors\DataProcessor;
 
+// This class implements a standard data processor and is concerned with single ptr data
 class EfdTransactionProcessor implements DataProcessor
 {
+    // for now I am storing allowable stock types as a property of the class.
     public $allowableStockTypes = ['stock', 'stock option'];
 
+    // The process data table function weeds out not stock transactions, fills blank types with stock
+    // if a ticker exists, then passes on to row processor
     public function processDataTable(Iterable $table) {
         if (!is_a($table, Collection::class)) {
             $table = collect($table);
@@ -20,6 +24,7 @@ class EfdTransactionProcessor implements DataProcessor
         return $stockTransactions->concat($filledBlankTransactions)->map([$this, 'processDataRow']);
     }
 
+    // we handle exchange and stock option transactions a specific way
     public function processDataRow(Iterable $row) {
         if ($row['type'] === 'exchange') {
             return $this->processExchangeTransaction($row);
@@ -32,6 +37,7 @@ class EfdTransactionProcessor implements DataProcessor
         return $row;
     }
 
+    // if the transactions is exchange, we need to parse out the exchanged ticker and received ticker
     public function processExchangeTransaction(Iterable $exchange)
     {
         $ticker = $exchange['ticker'];
@@ -57,6 +63,8 @@ class EfdTransactionProcessor implements DataProcessor
         return $exchange;
     }
 
+    // if the transactions is stock option, we need to ensure trim the fat off of the ticker name since
+    // we do not use that part of the data
     public function processStockOptionTransaction(Iterable $transaction)
     {
         $ticker = $transaction['ticker'];
@@ -74,6 +82,7 @@ class EfdTransactionProcessor implements DataProcessor
         return $transactions->whereIn('assetType', $this->allowableStockTypes);
     }
 
+    // get transactions with no asset type
     public function pluckBlankAssetTypeTransactions($transaction)
     {
         return !(isset($transaction['assetType']))
@@ -86,6 +95,7 @@ class EfdTransactionProcessor implements DataProcessor
         return isset($transaction['ticker']['symbol']) && $transaction['ticker']['symbol'] !== '--';
     }
 
+    // if a ticker exists on a blank transaction type, we can assume it is stock
     public function fillBlankAssetTypesWithStock(Collection $transactions)
     {
         return $transactions->filter([$this, 'pluckBlankAssetTypeTransactions'])

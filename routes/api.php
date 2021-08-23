@@ -19,4 +19,5 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+// an api call to use the pro publica api to get data on a senator. This obfuscates the api key
 Route::get('/pro-publica/transactors/{transactor}', [ProPublicaController::class, 'show'])->name('ProPublica.transactor.show');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Ptr;
 use Illuminate\Http\Request;
 
+// I created this class and am not sure why. Could be deleted
 class PtrController extends Controller
 {
     /**

@@ -6,8 +6,10 @@ use App\Models\TransactorType;
 use App\Http\Helpers\Processors\Paginatable;
 use App\Http\Helpers\Connectors\ProPublicaConnector;
 
+// this processor is an implemenation specific to pro publica data
 class ProPublicaDataProcessor extends ApiDataProcessor
 {
+    // map Sen. to senator
     protected $transactorTypes;
     protected $titleMap = [
         'Sen.' => 'senator'
@@ -19,6 +21,8 @@ class ProPublicaDataProcessor extends ApiDataProcessor
         $this->transactorTypes = TransactorType::all();
     }
 
+    // since the data table is given as one slice, we only need to ensure it is a Collection instance,
+    // rather than a standard array, before passing it to row processor
     public function processDataTable(Iterable $table)
     {
         $transactors = collect($table);
@@ -30,6 +34,7 @@ class ProPublicaDataProcessor extends ApiDataProcessor
         return $processedTransactors;
     }
 
+    // this function maps all data to DB friendly fields
     public function processDataRow(Iterable $row)
     {
         return [

@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Transactor;
 use Illuminate\Console\Command;
 
+// this simple command serves one purpose. Resave all the transactors to give them a slug
 class SluggifyTransactors extends Command
 {
     /**

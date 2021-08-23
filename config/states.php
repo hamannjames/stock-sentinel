@@ -1,5 +1,5 @@
 <?php
-
+// simple way to map state abbrevs to full name
 return [
     'AL'=>'Alabama',
     'AK'=>'Alaska',

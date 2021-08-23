@@ -12,6 +12,7 @@ use App\Models\TransactionAssetType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+// Model for transactions. Lots of relationships, because lots of foreign keys in DB
 class Transaction extends Model
 {
     use HasFactory;

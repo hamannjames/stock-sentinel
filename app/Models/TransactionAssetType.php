@@ -6,6 +6,7 @@ use App\Models\Transaction;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+// Model for transaction asset type (stock only, for now)
 class TransactionAssetType extends Model
 {
     use HasFactory;

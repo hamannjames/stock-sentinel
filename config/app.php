@@ -1,5 +1,6 @@
 <?php
 
+// I only added my service providers in this file. Everything else is laravel boilerplate
 use App\Providers\BladeServiceProvider;
 
 return [

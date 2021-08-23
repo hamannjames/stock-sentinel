@@ -1,5 +1,5 @@
 <?php
-
+// simple config for the pro publica api
 return [
     'baseUrl' => 'https://api.propublica.org',
     'congressPath' => '/congress',

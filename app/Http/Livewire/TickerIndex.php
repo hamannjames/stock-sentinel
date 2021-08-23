@@ -7,6 +7,8 @@ use Livewire\Component;
 use App\Models\Transaction;
 use Livewire\WithPagination;
 
+// this is identical to the senator index component, except with tickers it is safe to simply
+// grab all of them from DB. Also I do not do any filtering by in office
 class TickerIndex extends Component
 {
     use WithPagination;
