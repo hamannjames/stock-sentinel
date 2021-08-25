@@ -3,7 +3,7 @@
     <x-slot name="subHeading">See stock transactions made by our elected representatives</x-slot>
 
     @php
-        $publicFilters = ['amount_max', 'party', 'owner', 'in_office'];
+        $publicFilters = ['amount_min', 'amount_max', 'party', 'owner', 'in_office'];
     @endphp
 
     <p class="text-center px-4 max-w-screen-lg mx-auto mb-6">

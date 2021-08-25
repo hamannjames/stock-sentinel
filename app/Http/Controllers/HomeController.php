@@ -13,7 +13,7 @@ class HomeController extends Controller
     {
         // pull few weeks worth of transaction data starting with 2 weeks ago, since ptrs often
         // contain data that is a few weeks old, so the database is often a bit behind real time data
-        $endDate = Carbon::now()->subWeeks(2);
+        $endDate = Carbon::now()->subWeeks(2)->subDays(3);
         $startDate = $endDate->copy()->subWeeks(3);
 
         $transactions = Transaction::with('transactor')

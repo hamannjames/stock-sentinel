@@ -67,15 +67,15 @@ class SenatorIndex extends Component
         }
 
         // get all senators who we have transactions for and, if search is enabled, match criteria
-        $senators = Transactor::whereIn('id', $this->inTransactionTable)
-            ->when($this->inOffice,
-                fn($query) => $query->where('in_office', 1)
-            )
-            ->when($useSearch, 
+        $senators = Transactor::when($useSearch, 
                 fn ($query) => $query->where('first_name', 'like', "%{$this->search}%")
                     ->orWhere('middle_name', 'like', "%{$this->search}%")
                     ->orWhere('last_name', 'like', "%{$this->search}%")
             )
+            ->when($this->inOffice,
+                fn($query) => $query->where('in_office', true)
+            )
+            ->whereIn('id', $this->inTransactionTable)
             ->orderBy('last_name')
             ->paginate(16);
 
